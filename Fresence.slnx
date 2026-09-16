@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Fresence.App/Fresence.App.fsproj" />
+    <Project Path="src/Fresence.Discord/Fresence.Discord.fsproj" />
+    <Project Path="src/Fresence.Media/Fresence.Media.fsproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Fresence.App.Tests/Fresence.App.Tests.fsproj" />
+    <Project Path="tests/Fresence.Discord.Tests/Fresence.Discord.Tests.fsproj" />
+    <Project Path="tests/Fresence.Media.Tests/Fresence.Media.Tests.fsproj" />
+  </Folder>
+</Solution>
