@@ -1,4 +1,4 @@
-﻿namespace Fresence.Discord
+﻿module Fresence.Discord
 
 module Say =
     let hello name =
