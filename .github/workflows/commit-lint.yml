@@ -1,0 +1,22 @@
+name: Commit Lint
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  conventional-commits:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check commit message
+        run: |
+          msg=$(git log -1 --pretty=%s)
+          echo "Commit: $msg"
+          echo "$msg" | grep -Eq '^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\(.+\))?(!)?: .+'
