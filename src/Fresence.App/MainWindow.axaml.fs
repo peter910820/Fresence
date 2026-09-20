@@ -1,13 +1,140 @@
 namespace Fresence.App
 
+open System
+open System.Threading
+open System.Threading.Tasks
 open Avalonia
 open Avalonia.Controls
 open Avalonia.Markup.Xaml
+open Avalonia.Threading
+open Fresence.Discord
+open Fresence.Media
 
 type MainWindow () as this = 
     inherit Window ()
 
-    do this.InitializeComponent()
+    let mutable cancellationTokenSource: CancellationTokenSource option = None
+    let mutable mediaChangeSubscription: IDisposable option = None
+    let mutable discordClient: IDisposable option = None
 
+    do
+        this.InitializeComponent ()
+        (this.FindControl<Button> "StartButton").Click.Add(fun _ -> this.StartSynchronization ())
+
+        (this.FindControl<Button> "StopButton").Click.Add(fun _ ->
+            this.StopSynchronization ()
+            (this.FindControl<TextBlock> "StatusTextBlock").Text <- "已停止同步")
+
+    /// <summary>
+    /// 載入主視窗的 Avalonia XAML。
+    /// </summary>
     member private this.InitializeComponent() =
         AvaloniaXamlLoader.Load(this)
+
+    /// <summary>
+    /// 將同步結果與目前選取的歌曲顯示在視窗中。
+    /// </summary>
+    member private this.UpdateStatus(synchronizer: PresenceSynchronizer, result: PresenceSyncResult) =
+        let statusTextBlock = this.FindControl<TextBlock> "StatusTextBlock"
+        let sourceTextBlock = this.FindControl<TextBlock> "SourceTextBlock"
+        let trackTextBlock = this.FindControl<TextBlock> "TrackTextBlock"
+
+        statusTextBlock.Text <-
+            match result with
+            | Skipped -> "同步中：歌曲未變更"
+            | Updated -> "同步中：已更新 Discord Presence"
+            | Cleared -> "同步中：已清除 Discord Presence"
+            | Failed message -> $"同步失敗：{message}"
+
+        match synchronizer.CurrentSelection with
+        | Some selected ->
+            sourceTextBlock.Text <- $"來源：{selected.Browser}"
+            trackTextBlock.Text <-
+                $"歌曲：{selected.Session.Track.Title} — {selected.Session.Track.Artist}"
+        | None ->
+            sourceTextBlock.Text <- "來源：—"
+            trackTextBlock.Text <- "歌曲：—"
+
+    /// <summary>
+    /// 取消媒體事件訂閱並釋放 Discord 用戶端。
+    /// </summary>
+    member private this.StopSynchronization() =
+        cancellationTokenSource
+        |> Option.iter (fun source -> source.Cancel ())
+
+        mediaChangeSubscription
+        |> Option.iter (fun subscription -> subscription.Dispose ())
+
+        discordClient
+        |> Option.iter (fun client -> client.Dispose ())
+
+        cancellationTokenSource <- None
+        mediaChangeSubscription <- None
+        discordClient <- None
+        (this.FindControl<Button> "StartButton").IsEnabled <- true
+        (this.FindControl<Button> "StopButton").IsEnabled <- false
+
+    /// <summary>
+    /// 使用輸入的 Discord Application ID 建立事件驅動的同步作業。
+    /// </summary>
+    member private this.StartSynchronization() =
+        let applicationId = (this.FindControl<TextBox> "ApplicationIdTextBox").Text
+
+        if String.IsNullOrWhiteSpace applicationId then
+            (this.FindControl<TextBlock> "StatusTextBlock").Text <-
+                "請先輸入 Discord Application ID"
+        else
+            this.StopSynchronization ()
+
+            let cancellationSource = new CancellationTokenSource()
+            let client = new DiscordIpcClient(applicationId)
+            let mediaSessionReader = WindowsMediaSessionReader()
+            let synchronizer =
+                PresenceSynchronizer(
+                    mediaSessionReader :> IMediaSessionReader,
+                    client :> IDiscordPresenceClient
+                )
+
+            cancellationTokenSource <- Some cancellationSource
+            discordClient <- Some(client :> IDisposable)
+            (this.FindControl<Button> "StartButton").IsEnabled <- false
+            (this.FindControl<Button> "StopButton").IsEnabled <- true
+            (this.FindControl<TextBlock> "StatusTextBlock").Text <- "正在訂閱媒體事件"
+
+            Task.Run(
+                Func<Task>(fun () ->
+                    task {
+                        // 每次 GSMTC 事件觸發時，在背景執行同步，避免阻塞 UI 執行緒。
+                        let synchronize () =
+                            Task.Run(
+                                Func<Task>(fun () ->
+                                    task {
+                                        if not cancellationSource.IsCancellationRequested then
+                                            let! result = synchronizer.SynchronizeAsync ()
+
+                                            if not cancellationSource.IsCancellationRequested then
+                                                Dispatcher.UIThread.Post(fun () ->
+                                                    this.UpdateStatus(synchronizer, result))
+                                    })
+                            )
+                            |> ignore
+
+                        let! subscription =
+                            (mediaSessionReader :> IMediaSessionChangeNotifier)
+                                .SubscribeToChangesAsync(synchronize)
+
+                        if cancellationSource.IsCancellationRequested then
+                            subscription.Dispose ()
+                        else
+                            mediaChangeSubscription <- Some subscription
+
+                    })
+            )
+            |> ignore
+
+    /// <summary>
+    /// 在關閉視窗前停止同步並釋放相關資源。
+    /// </summary>
+    override this.OnClosed(eventArgs) =
+        this.StopSynchronization ()
+        base.OnClosed eventArgs
