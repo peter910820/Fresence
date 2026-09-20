@@ -1,5 +1,6 @@
 ﻿module Tests
 
+open System
 open Fresence.Media
 open Windows.Media.Control
 open Xunit
@@ -11,7 +12,10 @@ let session sourceAppUserModelId playbackState title =
       Track =
         { Title = title
           Artist = "Artist"
-          AlbumTitle = "Album" } }
+          AlbumTitle = "Album" }
+      Timeline =
+        { Position = TimeSpan.Zero
+          Duration = None } }
 
 // 驗證 Windows 的 Playing 狀態映射正確。
 [<Fact>]

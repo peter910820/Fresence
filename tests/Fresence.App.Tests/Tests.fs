@@ -1,5 +1,6 @@
 ﻿module Tests
 
+open System
 open System.Threading.Tasks
 open Fresence.App
 open Fresence.Discord
@@ -13,7 +14,10 @@ let session sourceAppUserModelId title =
       Track =
         { Title = title
           Artist = "Artist"
-          AlbumTitle = "Album" } }
+          AlbumTitle = "Album" }
+      Timeline =
+        { Position = TimeSpan.Zero
+          Duration = None } }
 
 type FakeMediaSessionReader(sessions: MediaSession list) =
     interface IMediaSessionReader with
