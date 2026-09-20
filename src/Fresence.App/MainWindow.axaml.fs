@@ -60,7 +60,9 @@ type MainWindow () as this =
     /// </summary>
     member private this.StopSynchronization() =
         cancellationTokenSource
-        |> Option.iter (fun source -> source.Cancel ())
+        |> Option.iter (fun source ->
+            source.Cancel ()
+            source.Dispose ())
 
         mediaChangeSubscription
         |> Option.iter (fun subscription -> subscription.Dispose ())
@@ -87,6 +89,7 @@ type MainWindow () as this =
             this.StopSynchronization ()
 
             let cancellationSource = new CancellationTokenSource()
+            let cancellationToken = cancellationSource.Token
             let client = new DiscordIpcClient(applicationId)
             let mediaSessionReader = WindowsMediaSessionReader()
             let synchronizer =
@@ -109,10 +112,10 @@ type MainWindow () as this =
                             Task.Run(
                                 Func<Task>(fun () ->
                                     task {
-                                        if not cancellationSource.IsCancellationRequested then
+                                        if not cancellationToken.IsCancellationRequested then
                                             let! result = synchronizer.SynchronizeAsync ()
 
-                                            if not cancellationSource.IsCancellationRequested then
+                                            if not cancellationToken.IsCancellationRequested then
                                                 Dispatcher.UIThread.Post(fun () ->
                                                     this.UpdateStatus(synchronizer, result))
                                     })
@@ -123,7 +126,7 @@ type MainWindow () as this =
                             (mediaSessionReader :> IMediaSessionChangeNotifier)
                                 .SubscribeToChangesAsync(synchronize)
 
-                        if cancellationSource.IsCancellationRequested then
+                        if cancellationToken.IsCancellationRequested then
                             subscription.Dispose ()
                         else
                             mediaChangeSubscription <- Some subscription

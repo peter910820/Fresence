@@ -6,7 +6,8 @@
         x:Class="Fresence.App.MainWindow"
         Title="Fresence"
         Width="460"
-        Height="320">
+        Height="320"
+        CanResize="False">
     <StackPanel Margin="24" Spacing="12">
         <TextBlock Text="Discord Application ID" />
         <TextBox Name="ApplicationIdTextBox"
