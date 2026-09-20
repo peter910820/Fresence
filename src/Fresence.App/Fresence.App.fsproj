@@ -4,9 +4,22 @@
     <TargetFramework>net10.0-windows10.0.17763.0</TargetFramework>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <DiscordApplicationId Condition="'$(DiscordApplicationId)' == ''"></DiscordApplicationId>
+    <BuildConstantsFile>$(MSBuildThisFileDirectory)BuildConstants.fs</BuildConstantsFile>
   </PropertyGroup>
 
+  <Target Name="GenerateBuildConstants" BeforeTargets="PrepareForBuild;BeforeCompile">
+    <PropertyGroup>
+      <_EscapedDiscordApplicationId>$([System.String]::Copy('$(DiscordApplicationId)').Replace('\','\\').Replace('"','\"'))</_EscapedDiscordApplicationId>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(BuildConstantsFile)"
+                      Overwrite="true"
+                      WriteOnlyWhenDifferent="true"
+                      Lines="namespace Fresence.App%0A%0Amodule BuildConstants =%0A    let DiscordApplicationId = &quot;$(_EscapedDiscordApplicationId)&quot;" />
+  </Target>
+
   <ItemGroup>
+    <Compile Include="BuildConstants.fs" />
     <Compile Include="PresenceSynchronizer.fs" />
     <Compile Include="MainWindow.axaml.fs" />
     <Compile Include="App.axaml.fs" />

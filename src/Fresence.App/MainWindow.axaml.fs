@@ -11,8 +11,8 @@ open Avalonia.Threading
 open Fresence.Discord
 open Fresence.Media
 
-type MainWindow () as this = 
-    inherit Window ()
+type MainWindow() as this =
+    inherit Window()
 
     let mutable cancellationTokenSource: CancellationTokenSource option = None
     let mutable mediaChangeSubscription: IDisposable option = None
@@ -21,18 +21,27 @@ type MainWindow () as this =
     let mutable albumArtworkHttpClient: HttpClient option = None
 
     do
-        this.InitializeComponent ()
-        (this.FindControl<Button> "StartButton").Click.Add(fun _ -> this.StartSynchronization ())
+        this.InitializeComponent()
+        this.ApplyCompiledApplicationId()
+        (this.FindControl<Button> "StartButton").Click.Add(fun _ -> this.StartSynchronization())
 
-        (this.FindControl<Button> "StopButton").Click.Add(fun _ ->
-            this.StopSynchronization ()
-            (this.FindControl<TextBlock> "StatusTextBlock").Text <- "已停止同步")
+        (this.FindControl<Button> "StopButton")
+            .Click.Add(fun _ ->
+                this.StopSynchronization()
+                (this.FindControl<TextBlock> "StatusTextBlock").Text <- "已停止同步")
 
     /// <summary>
     /// 載入主視窗的 Avalonia XAML。
     /// </summary>
-    member private this.InitializeComponent() =
-        AvaloniaXamlLoader.Load(this)
+    member private this.InitializeComponent() = AvaloniaXamlLoader.Load(this)
+
+    /// <summary>
+    /// 若編譯時已指定 Application ID，則隱藏輸入欄位。
+    /// </summary>
+    member private this.ApplyCompiledApplicationId() =
+        if not (String.IsNullOrWhiteSpace CompiledApplicationId.Value) then
+            (this.FindControl<Border> "ApplicationIdCard").IsVisible <- false
+            this.Height <- 300.0
 
     /// <summary>
     /// 將同步結果與目前選取的歌曲顯示在視窗中。
@@ -52,8 +61,7 @@ type MainWindow () as this =
         match synchronizer.CurrentSelection with
         | Some selected ->
             sourceTextBlock.Text <- $"來源：{selected.Browser}"
-            trackTextBlock.Text <-
-                $"歌曲：{selected.Session.Track.Title} — {selected.Session.Track.Artist}"
+            trackTextBlock.Text <- $"歌曲：{selected.Session.Track.Title} — {selected.Session.Track.Artist}"
         | None ->
             sourceTextBlock.Text <- "來源：—"
             trackTextBlock.Text <- "歌曲：—"
@@ -64,20 +72,17 @@ type MainWindow () as this =
     member private this.StopSynchronization() =
         cancellationTokenSource
         |> Option.iter (fun source ->
-            source.Cancel ()
-            source.Dispose ())
+            source.Cancel()
+            source.Dispose())
 
         mediaChangeSubscription
-        |> Option.iter (fun subscription -> subscription.Dispose ())
+        |> Option.iter (fun subscription -> subscription.Dispose())
 
-        discordClient
-        |> Option.iter (fun client -> client.Dispose ())
+        discordClient |> Option.iter (fun client -> client.Dispose())
 
-        albumArtworkProvider
-        |> Option.iter (fun provider -> provider.Dispose ())
+        albumArtworkProvider |> Option.iter (fun provider -> provider.Dispose())
 
-        albumArtworkHttpClient
-        |> Option.iter (fun client -> client.Dispose ())
+        albumArtworkHttpClient |> Option.iter (fun client -> client.Dispose())
 
         cancellationTokenSource <- None
         mediaChangeSubscription <- None
@@ -91,27 +96,29 @@ type MainWindow () as this =
     /// 使用輸入的 Discord Application ID 建立事件驅動的同步作業。
     /// </summary>
     member private this.StartSynchronization() =
-        let applicationId = (this.FindControl<TextBox> "ApplicationIdTextBox").Text
+        let applicationId =
+            if String.IsNullOrWhiteSpace CompiledApplicationId.Value then
+                (this.FindControl<TextBox> "ApplicationIdTextBox").Text
+            else
+                CompiledApplicationId.Value
 
         if String.IsNullOrWhiteSpace applicationId then
-            (this.FindControl<TextBlock> "StatusTextBlock").Text <-
-                "請先輸入 Discord Application ID"
+            (this.FindControl<TextBlock> "StatusTextBlock").Text <- "請先輸入 Discord Application ID"
         else
-            this.StopSynchronization ()
+            this.StopSynchronization()
 
             let cancellationSource = new CancellationTokenSource()
             let cancellationToken = cancellationSource.Token
             let client = new DiscordIpcClient(applicationId)
+
             let artworkHttpClient =
-                new HttpClient(
-                    Timeout = TimeSpan.FromSeconds 10.0,
-                    MaxResponseContentBufferSize = 1_048_576L
-                )
+                new HttpClient(Timeout = TimeSpan.FromSeconds 10.0, MaxResponseContentBufferSize = 1_048_576L)
 
             let artworkProvider =
                 new ItunesAlbumArtworkProvider(artworkHttpClient, TimeSpan.FromSeconds 10.0)
 
             let mediaSessionReader = WindowsMediaSessionReader()
+
             let synchronizer =
                 PresenceSynchronizer(
                     mediaSessionReader :> IMediaSessionReader,
@@ -136,7 +143,7 @@ type MainWindow () as this =
                                 Func<Task>(fun () ->
                                     task {
                                         if not cancellationToken.IsCancellationRequested then
-                                            let! result = synchronizer.SynchronizeAsync ()
+                                            let! result = synchronizer.SynchronizeAsync()
 
                                             if not cancellationToken.IsCancellationRequested then
                                                 Dispatcher.UIThread.Post(fun () ->
@@ -146,13 +153,12 @@ type MainWindow () as this =
                             |> ignore
 
                         let! subscription =
-                            (mediaSessionReader :> IMediaSessionChangeNotifier)
-                                .SubscribeToChangesAsync(synchronize)
+                            (mediaSessionReader :> IMediaSessionChangeNotifier).SubscribeToChangesAsync(synchronize)
 
                         mediaChangeSubscription <- Some subscription
 
                         if cancellationToken.IsCancellationRequested then
-                            subscription.Dispose ()
+                            subscription.Dispose()
                             mediaChangeSubscription <- None
 
                     })
@@ -163,5 +169,5 @@ type MainWindow () as this =
     /// 在關閉視窗前停止同步並釋放相關資源。
     /// </summary>
     override this.OnClosed(eventArgs) =
-        this.StopSynchronization ()
+        this.StopSynchronization()
         base.OnClosed eventArgs

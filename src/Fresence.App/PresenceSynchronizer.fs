@@ -4,6 +4,13 @@ open System.Threading.Tasks
 open Fresence.Discord
 open Fresence.Media
 
+[<AbstractClass; Sealed>]
+type CompiledApplicationId private () =
+    /// <summary>
+    /// 編譯時寫入的 Discord Application ID；未指定時為空字串。
+    /// </summary>
+    static member Value = BuildConstants.DiscordApplicationId
+
 type PresenceSyncResult =
     | Skipped
     | Updated
