@@ -161,7 +161,7 @@ module DiscordActivityMapper =
 
         { activity with
             LargeImageUrl = artworkUrl
-            LargeImageText = artworkUrl |> Option.map (fun _ -> limitText session.Track.Artist) }
+            LargeImageText = None }
 
 /// <summary>
 /// 透過 DiscordRichPresence 用戶端實作 Rich Presence IPC。
@@ -199,10 +199,12 @@ type DiscordIpcClient(applicationId: string) =
 
                 activity.LargeImageUrl
                 |> Option.iter (fun imageUrl ->
-                    let imageText = activity.LargeImageText |> Option.defaultValue activity.State
+                    let assets = Assets(LargeImageKey = imageUrl)
 
-                    presence.Assets <-
-                        Assets(LargeImageKey = imageUrl, LargeImageText = imageText))
+                    activity.LargeImageText
+                    |> Option.iter (fun imageText -> assets.LargeImageText <- imageText)
+
+                    presence.Assets <- assets)
 
                 client.SetPresence(presence))
 

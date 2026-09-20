@@ -55,7 +55,7 @@ let ``歌曲資料會映射為 Discord Activity`` () =
     Assert.Equal(None, activity.LargeImageUrl)
     Assert.Equal(None, activity.LargeImageText)
 
-// 驗證專輯封面 URL 與演出者會映射為 Discord large image 資料。
+// 驗證專輯封面 URL 會映射為 Discord large image 資料。
 [<Fact>]
 let ``專輯封面會映射為 Discord large image`` () =
     let session =
@@ -73,7 +73,7 @@ let ``專輯封面會映射為 Discord large image`` () =
         DiscordActivityMapper.withArtwork (Some "https://example.com/cover.jpg") session
 
     Assert.Equal(Some "https://example.com/cover.jpg", activity.LargeImageUrl)
-    Assert.Equal(Some "Artist name", activity.LargeImageText)
+    Assert.Equal(None, activity.LargeImageText)
 
 // 驗證播放中的歌曲會映射為 Discord 進度 timestamps。
 [<Fact>]
