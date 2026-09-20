@@ -3,6 +3,7 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows10.0.17763.0</TargetFramework>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,6 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <AvaloniaResource Include="Assets\app.ico" />
     <ProjectReference Include="..\Fresence.Media\Fresence.Media.fsproj" />
     <ProjectReference Include="..\Fresence.Discord\Fresence.Discord.fsproj" />
   </ItemGroup>

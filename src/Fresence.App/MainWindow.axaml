@@ -7,7 +7,8 @@
         Title="Fresence"
         Width="460"
         Height="320"
-        CanResize="False">
+        CanResize="False"
+        Icon="/Assets/app.ico">
     <StackPanel Margin="24" Spacing="12">
         <TextBlock Text="Discord Application ID" />
         <TextBox Name="ApplicationIdTextBox"
