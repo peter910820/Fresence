@@ -19,12 +19,14 @@ type IAlbumArtworkProvider =
 /// </summary>
 type ItunesAlbumArtworkProvider(httpClient: HttpClient, timeout: TimeSpan) =
     let cacheLifetime = TimeSpan.FromMinutes 30.0
-    let cacheOptions = new MemoryCacheOptions()
 
-    do
-        cacheOptions.ExpirationScanFrequency <- TimeSpan.FromMinutes 1.0
-
-    let cache = new MemoryCache(cacheOptions)
+    let cache =
+        new MemoryCache(
+            MemoryCacheOptions(
+                SizeLimit = Nullable 256L,
+                ExpirationScanFrequency = TimeSpan.FromMinutes 1.0
+            )
+        )
 
     // 將歌曲名稱與演出者正規化，以避免空白與大小寫影響比對。
     let normalize (value: string) = value.Trim().ToUpperInvariant()
@@ -73,8 +75,7 @@ type ItunesAlbumArtworkProvider(httpClient: HttpClient, timeout: TimeSpan) =
             else
                 try
                     use cancellationSource = new Threading.CancellationTokenSource(timeout)
-
-                    let! response = httpClient.GetAsync(searchUri track, cancellationSource.Token)
+                    use! response = httpClient.GetAsync(searchUri track, cancellationSource.Token)
 
                     if not response.IsSuccessStatusCode then
                         return None
@@ -93,6 +94,7 @@ type ItunesAlbumArtworkProvider(httpClient: HttpClient, timeout: TimeSpan) =
             cache.GetOrCreateAsync(
                 trackKey track,
                 Func<ICacheEntry, Task<string option>>(fun entry ->
+                    entry.SetSize 1L |> ignore
                     entry.AbsoluteExpirationRelativeToNow <- Nullable cacheLifetime
                     searchAsync track)
             )

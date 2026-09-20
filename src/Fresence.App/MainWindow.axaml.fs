@@ -102,7 +102,12 @@ type MainWindow () as this =
             let cancellationSource = new CancellationTokenSource()
             let cancellationToken = cancellationSource.Token
             let client = new DiscordIpcClient(applicationId)
-            let artworkHttpClient = new HttpClient()
+            let artworkHttpClient =
+                new HttpClient(
+                    Timeout = TimeSpan.FromSeconds 10.0,
+                    MaxResponseContentBufferSize = 1_048_576L
+                )
+
             let artworkProvider =
                 new ItunesAlbumArtworkProvider(artworkHttpClient, TimeSpan.FromSeconds 10.0)
 
@@ -144,10 +149,11 @@ type MainWindow () as this =
                             (mediaSessionReader :> IMediaSessionChangeNotifier)
                                 .SubscribeToChangesAsync(synchronize)
 
+                        mediaChangeSubscription <- Some subscription
+
                         if cancellationToken.IsCancellationRequested then
                             subscription.Dispose ()
-                        else
-                            mediaChangeSubscription <- Some subscription
+                            mediaChangeSubscription <- None
 
                     })
             )
