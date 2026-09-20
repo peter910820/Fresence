@@ -109,7 +109,9 @@ type ItunesAlbumArtworkProvider(httpClient: HttpClient, timeout: TimeSpan) =
 type DiscordActivity =
     { Details: string
       State: string
-      Timestamps: (DateTime * DateTime) option }
+      Timestamps: (DateTime * DateTime) option
+      LargeImageUrl: string option
+      LargeImageText: string option }
 
 /// <summary>
 /// 管理 Discord 本機 IPC 連線與 Rich Presence 更新的契約。
@@ -147,7 +149,19 @@ module DiscordActivityMapper =
 
         { Details = limitText session.Track.Title
           State = limitText session.Track.Artist
-          Timestamps = timestamps }
+          Timestamps = timestamps
+          LargeImageUrl = None
+          LargeImageText = None }
+
+    /// <summary>
+    /// 將專輯封面資料加入 Discord Activity。
+    /// </summary>
+    let withArtwork artworkUrl (session: MediaSession) =
+        let activity = fromMediaSession session
+
+        { activity with
+            LargeImageUrl = artworkUrl
+            LargeImageText = artworkUrl |> Option.map (fun _ -> limitText session.Track.Artist) }
 
 /// <summary>
 /// 透過 DiscordRichPresence 用戶端實作 Rich Presence IPC。
@@ -182,6 +196,13 @@ type DiscordIpcClient(applicationId: string) =
 
                 activity.Timestamps
                 |> Option.iter (fun (startTime, endTime) -> presence.Timestamps <- Timestamps(startTime, endTime))
+
+                activity.LargeImageUrl
+                |> Option.iter (fun imageUrl ->
+                    let imageText = activity.LargeImageText |> Option.defaultValue activity.State
+
+                    presence.Assets <-
+                        Assets(LargeImageKey = imageUrl, LargeImageText = imageText))
 
                 client.SetPresence(presence))
 

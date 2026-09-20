@@ -12,7 +12,8 @@ type PresenceSyncResult =
 
 type PresenceSynchronizer(
     mediaSessionReader: IMediaSessionReader,
-    discordPresenceClient: IDiscordPresenceClient
+    discordPresenceClient: IDiscordPresenceClient,
+    artworkProvider: IAlbumArtworkProvider
 ) =
     let mutable isConnected = false
     let mutable hasSynchronized = false
@@ -48,7 +49,8 @@ type PresenceSynchronizer(
                 else
                     match selection with
                     | Some selected ->
-                        let activity = DiscordActivityMapper.fromMediaSession selected.Session
+                        let! artworkUrl = artworkProvider.GetArtworkUrlAsync selected.Session.Track
+                        let activity = DiscordActivityMapper.withArtwork artworkUrl selected.Session
                         let! updateResult = discordPresenceClient.SetActivityAsync activity
 
                         match updateResult with

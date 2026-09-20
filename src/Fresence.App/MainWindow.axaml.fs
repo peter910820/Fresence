@@ -1,6 +1,7 @@
 namespace Fresence.App
 
 open System
+open System.Net.Http
 open System.Threading
 open System.Threading.Tasks
 open Avalonia
@@ -16,6 +17,8 @@ type MainWindow () as this =
     let mutable cancellationTokenSource: CancellationTokenSource option = None
     let mutable mediaChangeSubscription: IDisposable option = None
     let mutable discordClient: IDisposable option = None
+    let mutable albumArtworkProvider: IDisposable option = None
+    let mutable albumArtworkHttpClient: HttpClient option = None
 
     do
         this.InitializeComponent ()
@@ -56,7 +59,7 @@ type MainWindow () as this =
             trackTextBlock.Text <- "歌曲：—"
 
     /// <summary>
-    /// 取消媒體事件訂閱並釋放 Discord 用戶端。
+    /// 取消媒體事件訂閱並釋放 Discord 與專輯封面資源。
     /// </summary>
     member private this.StopSynchronization() =
         cancellationTokenSource
@@ -70,9 +73,17 @@ type MainWindow () as this =
         discordClient
         |> Option.iter (fun client -> client.Dispose ())
 
+        albumArtworkProvider
+        |> Option.iter (fun provider -> provider.Dispose ())
+
+        albumArtworkHttpClient
+        |> Option.iter (fun client -> client.Dispose ())
+
         cancellationTokenSource <- None
         mediaChangeSubscription <- None
         discordClient <- None
+        albumArtworkProvider <- None
+        albumArtworkHttpClient <- None
         (this.FindControl<Button> "StartButton").IsEnabled <- true
         (this.FindControl<Button> "StopButton").IsEnabled <- false
 
@@ -91,15 +102,22 @@ type MainWindow () as this =
             let cancellationSource = new CancellationTokenSource()
             let cancellationToken = cancellationSource.Token
             let client = new DiscordIpcClient(applicationId)
+            let artworkHttpClient = new HttpClient()
+            let artworkProvider =
+                new ItunesAlbumArtworkProvider(artworkHttpClient, TimeSpan.FromSeconds 10.0)
+
             let mediaSessionReader = WindowsMediaSessionReader()
             let synchronizer =
                 PresenceSynchronizer(
                     mediaSessionReader :> IMediaSessionReader,
-                    client :> IDiscordPresenceClient
+                    client :> IDiscordPresenceClient,
+                    artworkProvider :> IAlbumArtworkProvider
                 )
 
             cancellationTokenSource <- Some cancellationSource
             discordClient <- Some(client :> IDisposable)
+            albumArtworkProvider <- Some(artworkProvider :> IDisposable)
+            albumArtworkHttpClient <- Some artworkHttpClient
             (this.FindControl<Button> "StartButton").IsEnabled <- false
             (this.FindControl<Button> "StopButton").IsEnabled <- true
             (this.FindControl<TextBlock> "StatusTextBlock").Text <- "正在訂閱媒體事件"
