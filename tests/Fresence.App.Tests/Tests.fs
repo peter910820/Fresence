@@ -49,13 +49,23 @@ type FakeDiscordPresenceClient() =
             clearCount <- clearCount + 1
             Task.FromResult(Ok ())
 
+type FakeAlbumArtworkProvider(artworkUrl: string option) =
+    interface IAlbumArtworkProvider with
+        // 回傳建立測試替身時指定的封面 URL。
+        member _.GetArtworkUrlAsync(_) = Task.FromResult artworkUrl
+
 // 驗證第一次同步會將歌曲映射並更新至 Discord。
 [<Fact>]
 let ``新歌曲會更新 Discord Presence`` () =
     let discordClient = FakeDiscordPresenceClient ()
+    let artworkProvider = FakeAlbumArtworkProvider None
 
     let synchronizer =
-        PresenceSynchronizer(FakeMediaSessionReader [ session "msedge.exe" "Song title" ], discordClient)
+        PresenceSynchronizer(
+            FakeMediaSessionReader [ session "msedge.exe" "Song title" ],
+            discordClient,
+            artworkProvider
+        )
 
     let result = (synchronizer.SynchronizeAsync ()).Result
 
@@ -68,9 +78,14 @@ let ``新歌曲會更新 Discord Presence`` () =
 [<Fact>]
 let ``未變更的歌曲不會重複更新 Discord Presence`` () =
     let discordClient = FakeDiscordPresenceClient ()
+    let artworkProvider = FakeAlbumArtworkProvider None
 
     let synchronizer =
-        PresenceSynchronizer(FakeMediaSessionReader [ session "msedge.exe" "Same song" ], discordClient)
+        PresenceSynchronizer(
+            FakeMediaSessionReader [ session "msedge.exe" "Same song" ],
+            discordClient,
+            artworkProvider
+        )
 
     (synchronizer.SynchronizeAsync ()).Wait()
     let result = (synchronizer.SynchronizeAsync ()).Result
@@ -82,9 +97,27 @@ let ``未變更的歌曲不會重複更新 Discord Presence`` () =
 [<Fact>]
 let ``沒有可同步歌曲時清除 Discord Presence`` () =
     let discordClient = FakeDiscordPresenceClient ()
-    let synchronizer = PresenceSynchronizer(FakeMediaSessionReader [], discordClient)
+    let artworkProvider = FakeAlbumArtworkProvider None
+    let synchronizer = PresenceSynchronizer(FakeMediaSessionReader [], discordClient, artworkProvider)
 
     let result = (synchronizer.SynchronizeAsync ()).Result
 
     Assert.Equal(Cleared, result)
     Assert.Equal(1, discordClient.ClearCount)
+
+// 驗證同步歌曲時會將查找到的封面加入 Discord Activity。
+[<Fact>]
+let ``新歌曲會將專輯封面同步至 Discord`` () =
+    let discordClient = FakeDiscordPresenceClient ()
+    let artworkProvider = FakeAlbumArtworkProvider(Some "https://example.com/cover.jpg")
+
+    let synchronizer =
+        PresenceSynchronizer(
+            FakeMediaSessionReader [ session "msedge.exe" "Song title" ],
+            discordClient,
+            artworkProvider
+        )
+
+    (synchronizer.SynchronizeAsync ()).Wait()
+
+    Assert.Equal(Some "https://example.com/cover.jpg", discordClient.Activities.Head.LargeImageUrl)
