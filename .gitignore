@@ -58,3 +58,7 @@ nunit-*.xml
 
 # 目前已產生的 Visual Studio 工作區快取
 .vs/
+
+publish/
+
+*.rar
