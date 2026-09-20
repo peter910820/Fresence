@@ -2,7 +2,6 @@
 
 open System
 open Avalonia
-open Avalonia.Diagnostics
 
 module Program =
 
@@ -10,7 +9,7 @@ module Program =
     /// 建立並設定 Avalonia 桌面應用程式。
     /// </summary>
     [<CompiledName "BuildAvaloniaApp">]
-    let buildAvaloniaApp (): AppBuilder =
+    let buildAvaloniaApp () : AppBuilder =
         AppBuilder
             .Configure<App>()
             .UsePlatformDetect()
