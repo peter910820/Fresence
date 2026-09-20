@@ -4,6 +4,7 @@ open Fresence.Discord
 open Fresence.Media
 open Xunit
 
+// 驗證歌曲資料會映射為 Discord 的 Details 與 State。
 [<Fact>]
 let ``歌曲資料會映射為 Discord Activity`` () =
     let session =

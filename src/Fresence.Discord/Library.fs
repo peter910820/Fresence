@@ -35,6 +35,7 @@ module DiscordActivityMapper =
 type DiscordIpcClient(applicationId: string) =
     let client = new DiscordRpcClient(applicationId)
 
+    // 執行 Discord 用戶端操作並將例外轉換為 Result。
     let execute action =
         task {
             try
@@ -45,9 +46,15 @@ type DiscordIpcClient(applicationId: string) =
         }
 
     interface IDiscordPresenceClient with
+        /// <summary>
+        /// 初始化 Discord Rich Presence 用戶端。
+        /// </summary>
         member _.ConnectAsync() =
-            execute (fun () -> client.Initialize() |> ignore)
+            execute (fun () -> client.Initialize () |> ignore)
 
+        /// <summary>
+        /// 設定目前歌曲的 Discord Rich Presence。
+        /// </summary>
         member _.SetActivityAsync activity =
             execute (fun () ->
                 client.SetPresence(
@@ -57,8 +64,14 @@ type DiscordIpcClient(applicationId: string) =
                     )
                 ))
 
+        /// <summary>
+        /// 清除 Fresence 設定的 Discord Rich Presence。
+        /// </summary>
         member _.ClearActivityAsync() =
             execute client.ClearPresence
 
     interface IDisposable with
-        member _.Dispose() = client.Dispose()
+        /// <summary>
+        /// 釋放 Discord Rich Presence 用戶端資源。
+        /// </summary>
+        member _.Dispose() = client.Dispose ()

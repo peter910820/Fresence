@@ -22,12 +22,22 @@ type MediaSession =
       Track: Track }
 
 type IMediaSessionReader =
+    /// <summary>
+    /// 非同步取得目前所有 Windows 媒體工作階段。
+    /// </summary>
     abstract GetSessionsAsync: unit -> Task<MediaSession list>
 
 type IMediaSessionChangeNotifier =
+    /// <summary>
+    /// 訂閱媒體工作階段、歌曲屬性與播放狀態的變更。
+    /// 回傳值應在不再需要監聽時釋放。
+    /// </summary>
     abstract SubscribeToChangesAsync: (unit -> unit) -> Task<IDisposable>
 
 module MediaSessionMapper =
+    /// <summary>
+    /// 將 Windows GSMTC 播放狀態轉換為 Fresence 的播放狀態。
+    /// </summary>
     let playbackState status =
         match status with
         | GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing -> Playing
@@ -45,20 +55,23 @@ type SelectedMediaSession =
       Session: MediaSession }
 
 module BrowserMediaSessionSelector =
+    // 依來源 App ID 判斷支援的瀏覽器。
     let private browserFor (sourceAppUserModelId: string) =
-        let source = sourceAppUserModelId.ToLowerInvariant()
+        let source = sourceAppUserModelId.ToLowerInvariant ()
 
         if source.Contains "msedge" then Some Edge
         elif source.Contains "chrome" then Some Chrome
-        elif source.Contains("firefox") then Some Firefox
+        elif source.Contains "firefox" then Some Firefox
         else None
 
+    // 回傳瀏覽器優先順序，數字越小優先度越高。
     let private priority browser =
         match browser with
         | Edge -> 0
         | Chrome -> 1
         | Firefox -> 2
 
+    // 回傳播放狀態優先順序，優先顯示正在播放的歌曲。
     let private playbackPriority playbackState =
         match playbackState with
         | Playing -> 0
@@ -81,18 +94,24 @@ module BrowserMediaSessionSelector =
         |> List.tryHead
 
 module MediaSessionChangeDetector =
+    /// <summary>
+    /// 判斷目前選取的媒體工作階段是否和上次同步的結果不同。
+    /// </summary>
     let hasChanged previous current = previous <> current
 
 type WindowsMediaSessionReader() =
+    // 將 WinRT 工作階段轉換為 Fresence 的媒體資料模型。
     let readSession (session: GlobalSystemMediaTransportControlsSession) =
         task {
             let! properties =
-                session.TryGetMediaPropertiesAsync()
+                session.TryGetMediaPropertiesAsync ()
                 |> System.WindowsRuntimeSystemExtensions.AsTask
 
             return
                 { SourceAppUserModelId = session.SourceAppUserModelId
-                  PlaybackState = session.GetPlaybackInfo().PlaybackStatus |> MediaSessionMapper.playbackState
+                  PlaybackState =
+                    (session.GetPlaybackInfo ()).PlaybackStatus
+                    |> MediaSessionMapper.playbackState
                   Track =
                     { Title = properties.Title
                       Artist = properties.Artist
@@ -100,26 +119,33 @@ type WindowsMediaSessionReader() =
         }
 
     interface IMediaSessionReader with
+        /// <summary>
+        /// 從 Windows GSMTC 讀取並轉換目前所有媒體工作階段。
+        /// </summary>
         member _.GetSessionsAsync() =
             task {
                 let! manager =
-                    GlobalSystemMediaTransportControlsSessionManager.RequestAsync()
+                    GlobalSystemMediaTransportControlsSessionManager.RequestAsync ()
                     |> System.WindowsRuntimeSystemExtensions.AsTask
 
-                let! sessions = manager.GetSessions() |> Seq.map readSession |> Task.WhenAll
+                let! sessions = manager.GetSessions () |> Seq.map readSession |> Task.WhenAll
 
                 return List.ofArray sessions
             }
 
     interface IMediaSessionChangeNotifier with
+        /// <summary>
+        /// 訂閱 GSMTC 工作階段清單、歌曲屬性與播放狀態變更。
+        /// </summary>
         member _.SubscribeToChangesAsync(onChanged) =
             task {
                 let! manager =
-                    GlobalSystemMediaTransportControlsSessionManager.RequestAsync()
+                    GlobalSystemMediaTransportControlsSessionManager.RequestAsync ()
                     |> System.WindowsRuntimeSystemExtensions.AsTask
 
                 let mutable sessionSubscriptions: IDisposable list = []
 
+                // 訂閱單一工作階段的歌曲屬性與播放狀態事件。
                 let subscribeSession (session: GlobalSystemMediaTransportControlsSession) =
                     let propertiesChangedHandler =
                         new TypedEventHandler<GlobalSystemMediaTransportControlsSession, MediaPropertiesChangedEventArgs>(fun
@@ -143,10 +169,11 @@ type WindowsMediaSessionReader() =
                           member _.Dispose() =
                               session.remove_PlaybackInfoChanged (playbackChangedHandler) } ]
 
+                // 工作階段清單改變時，解除舊訂閱並註冊目前的工作階段。
                 let refreshSessions () =
-                    sessionSubscriptions |> List.iter (fun subscription -> subscription.Dispose())
+                    sessionSubscriptions |> List.iter (fun subscription -> subscription.Dispose ())
 
-                    sessionSubscriptions <- manager.GetSessions() |> Seq.collect subscribeSession |> Seq.toList
+                    sessionSubscriptions <- manager.GetSessions () |> Seq.collect subscribeSession |> Seq.toList
 
                     onChanged ()
 
@@ -165,5 +192,5 @@ type WindowsMediaSessionReader() =
                         member _.Dispose() =
                             manager.remove_SessionsChanged (sessionsChangedHandler)
 
-                            sessionSubscriptions |> List.iter (fun subscription -> subscription.Dispose()) }
+                            sessionSubscriptions |> List.iter (fun subscription -> subscription.Dispose ()) }
             }

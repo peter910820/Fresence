@@ -2,11 +2,15 @@
 
 open System
 open Avalonia
+open Avalonia.Diagnostics
 
 module Program =
 
-    [<CompiledName "BuildAvaloniaApp">] 
-    let buildAvaloniaApp () = 
+    /// <summary>
+    /// 建立並設定 Avalonia 桌面應用程式。
+    /// </summary>
+    [<CompiledName "BuildAvaloniaApp">]
+    let buildAvaloniaApp (): AppBuilder =
         AppBuilder
             .Configure<App>()
             .UsePlatformDetect()
@@ -16,6 +20,9 @@ module Program =
             .WithInterFont()
             .LogToTrace(areas = Array.empty)
 
+    /// <summary>
+    /// 啟動 Avalonia 傳統桌面應用程式生命週期。
+    /// </summary>
     [<EntryPoint; STAThread>]
     let main argv =
-        buildAvaloniaApp().StartWithClassicDesktopLifetime(argv)
+        (buildAvaloniaApp ()).StartWithClassicDesktopLifetime argv

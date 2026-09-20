@@ -18,22 +18,28 @@ type PresenceSynchronizer(
     let mutable hasSynchronized = false
     let mutable previousSelection: SelectedMediaSession option = None
 
+    /// <summary>
+    /// 取得最近一次成功同步的媒體工作階段。
+    /// </summary>
     member _.CurrentSelection = previousSelection
 
+    /// <summary>
+    /// 讀取媒體工作階段，並依變更結果更新或清除 Discord Presence。
+    /// </summary>
     member _.SynchronizeAsync() =
         task {
             let! connectionResult =
                 if isConnected then
-                    Task.FromResult(Ok ())
+                    Task.FromResult (Ok ())
                 else
-                    discordPresenceClient.ConnectAsync()
+                    discordPresenceClient.ConnectAsync ()
 
             match connectionResult with
             | Error message -> return Failed message
             | Ok () ->
                 isConnected <- true
 
-                let! sessions = mediaSessionReader.GetSessionsAsync()
+                let! sessions = mediaSessionReader.GetSessionsAsync ()
                 let selection = BrowserMediaSessionSelector.select sessions
 
                 if hasSynchronized
@@ -43,7 +49,7 @@ type PresenceSynchronizer(
                     match selection with
                     | Some selected ->
                         let activity = DiscordActivityMapper.fromMediaSession selected.Session
-                        let! updateResult = discordPresenceClient.SetActivityAsync(activity)
+                        let! updateResult = discordPresenceClient.SetActivityAsync activity
 
                         match updateResult with
                         | Ok () ->
@@ -52,7 +58,7 @@ type PresenceSynchronizer(
                             return Updated
                         | Error message -> return Failed message
                     | None ->
-                        let! clearResult = discordPresenceClient.ClearActivityAsync()
+                        let! clearResult = discordPresenceClient.ClearActivityAsync ()
 
                         match clearResult with
                         | Ok () ->

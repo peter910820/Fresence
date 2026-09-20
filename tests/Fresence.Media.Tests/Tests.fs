@@ -4,6 +4,7 @@ open Fresence.Media
 open Windows.Media.Control
 open Xunit
 
+// 建立測試用的媒體工作階段。
 let session sourceAppUserModelId playbackState title =
     { SourceAppUserModelId = sourceAppUserModelId
       PlaybackState = playbackState
@@ -12,6 +13,7 @@ let session sourceAppUserModelId playbackState title =
           Artist = "Artist"
           AlbumTitle = "Album" } }
 
+// 驗證 Windows 的 Playing 狀態映射正確。
 [<Fact>]
 let ``播放狀態 Playing 會映射為 Playing`` () =
     let result =
@@ -20,6 +22,7 @@ let ``播放狀態 Playing 會映射為 Playing`` () =
 
     Assert.Equal(Playing, result)
 
+// 驗證 Windows 的 Paused 狀態映射正確。
 [<Fact>]
 let ``播放狀態 Paused 會映射為 Paused`` () =
     let result =
@@ -28,6 +31,7 @@ let ``播放狀態 Paused 會映射為 Paused`` () =
 
     Assert.Equal(Paused, result)
 
+// 驗證未支援的 Windows 狀態會映射為 Unavailable。
 [<Fact>]
 let ``未處理的播放狀態會映射為 Unavailable`` () =
     let result =
@@ -36,6 +40,7 @@ let ``未處理的播放狀態會映射為 Unavailable`` () =
 
     Assert.Equal(Unavailable, result)
 
+// 驗證同時播放時 Edge 的優先順序高於 Chrome。
 [<Fact>]
 let ``選擇播放中的 Edge 工作階段`` () =
     let result =
@@ -47,6 +52,7 @@ let ``選擇播放中的 Edge 工作階段`` () =
     | Some selected -> Assert.Equal(Edge, selected.Browser)
     | None -> failwith "Expected an Edge media session."
 
+// 驗證暫停中的支援瀏覽器仍會被選取。
 [<Fact>]
 let ``選擇暫停中的瀏覽器工作階段`` () =
     let result =
@@ -59,6 +65,7 @@ let ``選擇暫停中的瀏覽器工作階段`` () =
         Assert.Equal(Paused, selected.Session.PlaybackState)
     | None -> failwith "Expected a paused Chrome media session."
 
+// 驗證已停止的支援瀏覽器仍會被選取。
 [<Fact>]
 let ``選擇已停止的瀏覽器工作階段`` () =
     let result =
@@ -71,6 +78,7 @@ let ``選擇已停止的瀏覽器工作階段`` () =
         Assert.Equal(Stopped, selected.Session.PlaybackState)
     | None -> failwith "Expected a stopped Firefox media session."
 
+// 驗證狀態未知的支援瀏覽器仍會被選取。
 [<Fact>]
 let ``選擇狀態未知的瀏覽器工作階段`` () =
     let result =
@@ -83,6 +91,7 @@ let ``選擇狀態未知的瀏覽器工作階段`` () =
         Assert.Equal(Unavailable, selected.Session.PlaybackState)
     | None -> failwith "Expected an unavailable Firefox media session."
 
+// 驗證播放中的工作階段優先於暫停中的工作階段。
 [<Fact>]
 let ``播放中的工作階段優先於暫停中的工作階段`` () =
     let result =
@@ -96,6 +105,7 @@ let ``播放中的工作階段優先於暫停中的工作階段`` () =
         Assert.Equal(Playing, selected.Session.PlaybackState)
     | None -> failwith "Expected a playing Chrome media session."
 
+// 驗證 Firefox 來源可被辨識並選取。
 [<Fact>]
 let ``選擇播放中的 Firefox 工作階段`` () =
     let result =
@@ -106,6 +116,7 @@ let ``選擇播放中的 Firefox 工作階段`` () =
     | Some selected -> Assert.Equal(Firefox, selected.Browser)
     | None -> failwith "Expected a Firefox media session."
 
+// 驗證歌曲資料不同時可偵測為變更。
 [<Fact>]
 let ``歌曲資料變更時偵測為已變更`` () =
     let previous = Some(session "msedge.exe" Playing "First song")
@@ -115,6 +126,7 @@ let ``歌曲資料變更時偵測為已變更`` () =
 
     Assert.True(result)
 
+// 驗證完全相同的歌曲資料不會被視為變更。
 [<Fact>]
 let ``相同歌曲資料不視為變更`` () =
     let current = Some(session "msedge.exe" Playing "Same song")
