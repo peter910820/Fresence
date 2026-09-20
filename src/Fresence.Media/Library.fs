@@ -1,6 +1,8 @@
 ﻿module Fresence.Media
 
+open System
 open System.Threading.Tasks
+open Windows.Foundation
 open Windows.Media.Control
 
 type PlaybackState =
@@ -21,6 +23,9 @@ type MediaSession =
 
 type IMediaSessionReader =
     abstract GetSessionsAsync: unit -> Task<MediaSession list>
+
+type IMediaSessionChangeNotifier =
+    abstract SubscribeToChangesAsync: (unit -> unit) -> Task<IDisposable>
 
 module MediaSessionMapper =
     let playbackState status =
@@ -43,14 +48,10 @@ module BrowserMediaSessionSelector =
     let private browserFor (sourceAppUserModelId: string) =
         let source = sourceAppUserModelId.ToLowerInvariant()
 
-        if source.Contains("msedge") then
-            Some Edge
-        elif source.Contains("chrome") then
-            Some Chrome
-        elif source.Contains("firefox") then
-            Some Firefox
-        else
-            None
+        if source.Contains "msedge" then Some Edge
+        elif source.Contains "chrome" then Some Chrome
+        elif source.Contains("firefox") then Some Firefox
+        else None
 
     let private priority browser =
         match browser with
@@ -74,14 +75,9 @@ module BrowserMediaSessionSelector =
         sessions
         |> List.choose (fun session ->
             match browserFor session.SourceAppUserModelId with
-            | Some browser ->
-                Some
-                    { Browser = browser
-                      Session = session }
+            | Some browser -> Some { Browser = browser; Session = session }
             | _ -> None)
-        |> List.sortBy (fun selected ->
-            playbackPriority selected.Session.PlaybackState,
-            priority selected.Browser)
+        |> List.sortBy (fun selected -> playbackPriority selected.Session.PlaybackState, priority selected.Browser)
         |> List.tryHead
 
 module MediaSessionChangeDetector =
@@ -96,9 +92,7 @@ type WindowsMediaSessionReader() =
 
             return
                 { SourceAppUserModelId = session.SourceAppUserModelId
-                  PlaybackState =
-                    session.GetPlaybackInfo().PlaybackStatus
-                    |> MediaSessionMapper.playbackState
+                  PlaybackState = session.GetPlaybackInfo().PlaybackStatus |> MediaSessionMapper.playbackState
                   Track =
                     { Title = properties.Title
                       Artist = properties.Artist
@@ -112,10 +106,64 @@ type WindowsMediaSessionReader() =
                     GlobalSystemMediaTransportControlsSessionManager.RequestAsync()
                     |> System.WindowsRuntimeSystemExtensions.AsTask
 
-                let! sessions =
-                    manager.GetSessions()
-                    |> Seq.map readSession
-                    |> Task.WhenAll
+                let! sessions = manager.GetSessions() |> Seq.map readSession |> Task.WhenAll
 
                 return List.ofArray sessions
+            }
+
+    interface IMediaSessionChangeNotifier with
+        member _.SubscribeToChangesAsync(onChanged) =
+            task {
+                let! manager =
+                    GlobalSystemMediaTransportControlsSessionManager.RequestAsync()
+                    |> System.WindowsRuntimeSystemExtensions.AsTask
+
+                let mutable sessionSubscriptions: IDisposable list = []
+
+                let subscribeSession (session: GlobalSystemMediaTransportControlsSession) =
+                    let propertiesChangedHandler =
+                        new TypedEventHandler<GlobalSystemMediaTransportControlsSession, MediaPropertiesChangedEventArgs>(fun
+                                                                                                                              _
+                                                                                                                              _ ->
+                            onChanged ())
+
+                    let playbackChangedHandler =
+                        new TypedEventHandler<GlobalSystemMediaTransportControlsSession, PlaybackInfoChangedEventArgs>(fun
+                                                                                                                           _
+                                                                                                                           _ ->
+                            onChanged ())
+
+                    session.add_MediaPropertiesChanged (propertiesChangedHandler)
+                    session.add_PlaybackInfoChanged (playbackChangedHandler)
+
+                    [ { new IDisposable with
+                          member _.Dispose() =
+                              session.remove_MediaPropertiesChanged (propertiesChangedHandler) }
+                      { new IDisposable with
+                          member _.Dispose() =
+                              session.remove_PlaybackInfoChanged (playbackChangedHandler) } ]
+
+                let refreshSessions () =
+                    sessionSubscriptions |> List.iter (fun subscription -> subscription.Dispose())
+
+                    sessionSubscriptions <- manager.GetSessions() |> Seq.collect subscribeSession |> Seq.toList
+
+                    onChanged ()
+
+                let sessionsChangedHandler =
+                    new TypedEventHandler<GlobalSystemMediaTransportControlsSessionManager, SessionsChangedEventArgs>(fun
+                                                                                                                          _
+                                                                                                                          _ ->
+                        refreshSessions ())
+
+                manager.add_SessionsChanged (sessionsChangedHandler)
+
+                refreshSessions ()
+
+                return
+                    { new IDisposable with
+                        member _.Dispose() =
+                            manager.remove_SessionsChanged (sessionsChangedHandler)
+
+                            sessionSubscriptions |> List.iter (fun subscription -> subscription.Dispose()) }
             }

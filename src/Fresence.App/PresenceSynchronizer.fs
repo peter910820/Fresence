@@ -1,7 +1,5 @@
 namespace Fresence.App
 
-open System
-open System.Threading
 open System.Threading.Tasks
 open Fresence.Discord
 open Fresence.Media
@@ -19,6 +17,8 @@ type PresenceSynchronizer(
     let mutable isConnected = false
     let mutable hasSynchronized = false
     let mutable previousSelection: SelectedMediaSession option = None
+
+    member _.CurrentSelection = previousSelection
 
     member _.SynchronizeAsync() =
         task {
@@ -62,12 +62,3 @@ type PresenceSynchronizer(
                         | Error message -> return Failed message
         }
 
-    member this.RunAsync(interval: TimeSpan, cancellationToken: CancellationToken) =
-        task {
-            try
-                while not cancellationToken.IsCancellationRequested do
-                    let! _ = this.SynchronizeAsync()
-                    do! Task.Delay(interval, cancellationToken)
-            with :? OperationCanceledException when cancellationToken.IsCancellationRequested ->
-                ()
-        }
