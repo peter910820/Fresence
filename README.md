@@ -21,7 +21,26 @@ dotnet run --project src/Fresence.App/Fresence.App.fsproj
 
 5. 在視窗中輸入 Application ID，然後按下「開始同步」。
 
+若編譯時已指定 `-p:DiscordApplicationId=...`，視窗不會顯示輸入欄，按下「開始同步」即可。
+
 > Application ID 不是 Discord Bot Token；請勿將 Bot Token 輸入 Fresence 或提交至版本控制。
+
+## 發布
+
+產出不需安裝 .NET 的 Windows x64 單檔，並寫入 Application ID：
+
+```powershell
+dotnet publish src/Fresence.App/Fresence.App.fsproj `
+  --configuration Release `
+  --runtime win-x64 `
+  --self-contained true `
+  -p:PublishSingleFile=true `
+  -p:IncludeNativeLibrariesForSelfExtract=true `
+  -p:DebugType=None `
+  -p:DebugSymbols=false `
+  -p:DiscordApplicationId=你的ApplicationID `
+  --output .\publish\win-x64
+```
 
 ## 限制
 
