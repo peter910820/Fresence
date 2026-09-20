@@ -2,29 +2,82 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="460" d:DesignHeight="320"
+        mc:Ignorable="d" d:DesignWidth="460" d:DesignHeight="380"
         x:Class="Fresence.App.MainWindow"
         Title="Fresence"
         Width="460"
-        Height="320"
+        Height="380"
         CanResize="False"
-        Icon="/Assets/app.ico">
-    <StackPanel Margin="24" Spacing="12">
-        <TextBlock Text="Discord Application ID" />
-        <TextBox Name="ApplicationIdTextBox"
-                 PlaceholderText="輸入 Discord Application ID" />
-
-        <StackPanel Orientation="Horizontal" Spacing="8">
-            <Button Name="StartButton" Content="開始同步" />
-            <Button Name="StopButton" Content="停止同步" IsEnabled="False" />
+        Icon="/Assets/app.ico"
+        Background="{DynamicResource FresenceWindowBackground}">
+    <StackPanel Margin="24" Spacing="16">
+        <StackPanel Spacing="4">
+            <TextBlock Text="Fresence"
+                       FontSize="22"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource FresenceTitleText}" />
+            <TextBlock Text="同步瀏覽器音樂到 Discord"
+                       FontSize="13"
+                       Foreground="{DynamicResource FresenceMutedText}" />
         </StackPanel>
 
-        <TextBlock Name="StatusTextBlock" Text="尚未開始同步" />
+        <Border Background="{DynamicResource FresenceCardBackground}"
+                CornerRadius="8"
+                Padding="14">
+            <StackPanel Spacing="8">
+                <TextBlock Text="Discord Application ID"
+                           FontSize="12"
+                           Foreground="{DynamicResource FresenceMutedText}" />
+                <TextBox Name="ApplicationIdTextBox"
+                         PlaceholderText="輸入 Discord Application ID" />
+            </StackPanel>
+        </Border>
 
-        <Border Padding="12" Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
-            <StackPanel Spacing="4">
-                <TextBlock Name="SourceTextBlock" Text="來源：—" />
-                <TextBlock Name="TrackTextBlock" Text="歌曲：—" TextWrapping="Wrap" />
+        <Grid ColumnDefinitions="* *" ColumnSpacing="8">
+            <Button Name="StartButton"
+                    Grid.Column="0"
+                    Classes="primary"
+                    Content="開始同步" />
+            <Button Name="StopButton"
+                    Grid.Column="1"
+                    Classes="secondary"
+                    Content="停止同步"
+                    IsEnabled="False" />
+        </Grid>
+
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <Ellipse Width="8"
+                     Height="8"
+                     VerticalAlignment="Center"
+                     Fill="#5865F2" />
+            <TextBlock Name="StatusTextBlock"
+                       Text="尚未開始同步"
+                       FontSize="13"
+                       Foreground="{DynamicResource FresenceMutedText}"
+                       VerticalAlignment="Center" />
+        </StackPanel>
+
+        <Border Background="{DynamicResource FresenceCardBackground}"
+                CornerRadius="8"
+                Padding="14">
+            <StackPanel Spacing="8">
+                <StackPanel Spacing="2">
+                    <TextBlock Text="來源"
+                               FontSize="11"
+                               Foreground="{DynamicResource FresenceMutedText}" />
+                    <TextBlock Name="SourceTextBlock"
+                               Text="來源：—"
+                               Foreground="{DynamicResource FresenceTitleText}" />
+                </StackPanel>
+                <StackPanel Spacing="2">
+                    <TextBlock Text="歌曲"
+                               FontSize="11"
+                               Foreground="{DynamicResource FresenceMutedText}" />
+                    <TextBlock Name="TrackTextBlock"
+                               Text="歌曲：—"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource FresenceTitleText}" />
+                </StackPanel>
             </StackPanel>
         </Border>
     </StackPanel>

@@ -1,10 +1,49 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Fresence.App.App"
-             RequestedThemeVariant="Default">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+             RequestedThemeVariant="Dark">
+
+    <Application.Resources>
+        <Color x:Key="SystemAccentColor">#5865F2</Color>
+        <Color x:Key="SystemAccentColorDark1">#4752C4</Color>
+        <Color x:Key="SystemAccentColorDark2">#3C45A5</Color>
+        <Color x:Key="SystemAccentColorDark3">#2E3682</Color>
+        <Color x:Key="SystemAccentColorLight1">#7983F5</Color>
+        <Color x:Key="SystemAccentColorLight2">#A4ABF8</Color>
+        <Color x:Key="SystemAccentColorLight3">#C9CDFB</Color>
+
+        <SolidColorBrush x:Key="FresenceWindowBackground" Color="#1E1F22" />
+        <SolidColorBrush x:Key="FresenceCardBackground" Color="#2B2D31" />
+        <SolidColorBrush x:Key="FresenceMutedText" Color="#B5BAC1" />
+        <SolidColorBrush x:Key="FresenceTitleText" Color="#F2F3F5" />
+        <SolidColorBrush x:Key="FresenceSecondaryButton" Color="#4E5058" />
+    </Application.Resources>
 
     <Application.Styles>
         <FluentTheme />
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="#5865F2" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="Padding" Value="12,8" />
+        </Style>
+        <Style Selector="Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#4752C4" />
+        </Style>
+        <Style Selector="Button.secondary">
+            <Setter Property="Background" Value="#4E5058" />
+            <Setter Property="Foreground" Value="#F2F3F5" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="Padding" Value="12,8" />
+        </Style>
+        <Style Selector="Button.secondary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#6D6F78" />
+        </Style>
+        <Style Selector="Button.secondary:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#3F4147" />
+            <Setter Property="Foreground" Value="#80848E" />
+        </Style>
     </Application.Styles>
 </Application>
