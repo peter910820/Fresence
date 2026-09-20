@@ -16,10 +16,15 @@ type Track =
       Artist: string
       AlbumTitle: string }
 
+type PlaybackTimeline =
+    { Position: TimeSpan
+      Duration: TimeSpan option }
+
 type MediaSession =
     { SourceAppUserModelId: string
       PlaybackState: PlaybackState
-      Track: Track }
+      Track: Track
+      Timeline: PlaybackTimeline }
 
 type IMediaSessionReader =
     /// <summary>
@@ -107,6 +112,9 @@ type WindowsMediaSessionReader() =
                 session.TryGetMediaPropertiesAsync ()
                 |> System.WindowsRuntimeSystemExtensions.AsTask
 
+            let timeline = session.GetTimelineProperties ()
+            let duration = timeline.EndTime - timeline.StartTime
+
             return
                 { SourceAppUserModelId = session.SourceAppUserModelId
                   PlaybackState =
@@ -115,7 +123,14 @@ type WindowsMediaSessionReader() =
                   Track =
                     { Title = properties.Title
                       Artist = properties.Artist
-                      AlbumTitle = properties.AlbumTitle } }
+                      AlbumTitle = properties.AlbumTitle }
+                  Timeline =
+                    { Position = timeline.Position
+                      Duration =
+                        if duration > TimeSpan.Zero then
+                            Some duration
+                        else
+                            None } }
         }
 
     interface IMediaSessionReader with
